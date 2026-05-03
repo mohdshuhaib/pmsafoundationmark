@@ -1,1 +1,1119 @@
-hlo
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wafy Foundation School - Mark List</title>
+    
+    <!-- Phosphor Icons for stylish icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- jsPDF and AutoTable for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    
+    <!-- JSZip for ZIP Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <style>
+        /* --- CSS VARIABLES (Color Palette & Spacing) --- */
+        :root {
+            --emerald-50: #ecfdf5; --emerald-100: #d1fae5; --emerald-200: #a7f3d0;
+            --emerald-300: #6ee7b7; --emerald-600: #059669; --emerald-800: #065f46; --emerald-900: #064e3b;
+            --teal-50: #f0fdfa; --teal-500: #14b8a6; --teal-600: #0d9488; --teal-700: #0f766e; --teal-800: #115e59;
+            --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb; --gray-400: #9ca3af;
+            --gray-500: #6b7280; --gray-600: #4b5563; --gray-700: #374151; --gray-800: #1f2937; --gray-900: #111827;
+            --red-100: #fee2e2; --red-300: #fca5a5; --red-500: #ef4444; --red-700: #b91c1c;
+            --green-50: #f0fdf4; --green-100: #dcfce7; --green-500: #22c55e; --green-700: #15803d;
+            --orange-50: #fff7ed; --orange-500: #f97316; --orange-700: #c2410c;
+        }
+
+        /* --- RESET & BASE --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--green-50); 
+            background-image: radial-gradient(var(--gray-200) 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--gray-800);
+            padding: 1rem;
+            min-height: 100vh;
+        }
+        button { font-family: inherit; cursor: pointer; border: none; background: none; }
+        
+        .hidden { display: none !important; }
+
+        /* --- LAYOUT --- */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            border: 1px solid var(--gray-100);
+            position: relative;
+        }
+
+        /* --- HEADER --- */
+        .header {
+            background: linear-gradient(to right, var(--emerald-800), var(--teal-700));
+            color: white;
+            padding: 1.5rem;
+            position: relative;
+            z-index: 50;
+            border-top-left-radius: 1rem;
+            border-top-right-radius: 1rem;
+        }
+        .header-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1.5rem;
+        }
+        .header-title-wrapper { max-width: 48rem; }
+        .header-title { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.025em; line-height: 1.2; }
+        .header-subtitle { font-size: 1.125rem; margin-top: 0.5rem; font-weight: 500; color: var(--emerald-100); }
+        .header-desc { font-size: 0.875rem; margin-top: 0.25rem; color: var(--emerald-200); }
+
+        /* --- STATS BOX --- */
+        .stats-box {
+            display: flex;
+            gap: 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+            width: 100%;
+            justify-content: center;
+        }
+        .stat-item { text-align: center; }
+        .stat-label { color: var(--emerald-100); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; margin-bottom: 0.25rem; }
+        .stat-value { font-size: 1.875rem; font-weight: 900; filter: drop-shadow(0 4px 3px rgba(0,0,0,0.07)); }
+        .stat-value.passed { color: var(--emerald-300); }
+        .stat-value.failed { color: var(--red-300); }
+        .stat-divider { width: 1px; background: rgba(255, 255, 255, 0.2); }
+
+        /* --- CONTROLS / DROPDOWNS --- */
+        .actions-bar { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; position: relative; z-index: 50; }
+        .dropdown-container { position: relative; }
+        
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+            padding: 0.625rem 1rem; border-radius: 0.5rem; font-weight: 700; font-size: 0.875rem;
+            transition: all 0.2s; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        .btn:active { transform: scale(0.95); }
+        
+        .btn-class { background: white; color: var(--emerald-800); border: 1px solid var(--emerald-100); min-width: 150px; }
+        .btn-class:hover { background: var(--gray-50); }
+        
+        .btn-pdf { background: var(--emerald-50); color: var(--emerald-900); border: 1px solid var(--emerald-100); }
+        .btn-pdf:hover { background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        
+        .btn-zip { background: var(--teal-600); color: white; border: 1px solid var(--teal-500); }
+        .btn-zip:hover { background: var(--teal-500); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .btn-zip.disabled { opacity: 0.75; cursor: not-allowed; pointer-events: none; }
+
+        .dropdown-menu {
+            position: absolute; top: 100%; left: 0; margin-top: 0.5rem;
+            background: white; border-radius: 0.5rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--gray-100); z-index: 50; overflow: hidden; min-width: 12rem;
+        }
+        .dropdown-item {
+            width: 100%; text-align: left; padding: 0.75rem 1rem; font-size: 0.875rem; font-weight: 500;
+            color: var(--gray-700); background: white; border-bottom: 1px solid var(--gray-50);
+            display: flex; align-items: center; gap: 0.5rem; transition: background-color 0.2s;
+        }
+        .dropdown-item:last-child { border-bottom: none; }
+        .dropdown-item:hover { background: var(--gray-50); }
+        .dropdown-item.hover-emerald:hover { background: var(--emerald-50); color: var(--emerald-800); }
+        .dropdown-item.hover-red:hover { background: var(--red-100); color: var(--red-700); }
+        .dropdown-item.hover-green:hover { background: var(--green-100); color: var(--green-700); }
+        .dropdown-item.hover-orange:hover { background: var(--orange-50); color: var(--orange-700); }
+        .dropdown-item.hover-teal:hover { background: var(--teal-50); color: var(--teal-800); }
+
+        /* --- TABLE --- */
+        .table-container { padding: 1.5rem; overflow-x: auto; width: 100%; position: relative; z-index: 0; }
+        .table-container::-webkit-scrollbar { height: 8px; width: 8px; }
+        .table-container::-webkit-scrollbar-track { background: var(--gray-100); border-radius: 4px; }
+        .table-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        .table-container::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+        table { width: 100%; font-size: 0.875rem; text-align: left; white-space: nowrap; border-collapse: collapse; }
+        thead { background: var(--gray-50); border-top: 1px solid var(--gray-200); border-bottom: 1px solid var(--gray-200); text-transform: uppercase; font-size: 0.75rem; color: var(--gray-600); }
+        th, td { padding: 0.75rem; border-right: 1px solid var(--gray-200); }
+        th { font-weight: 600; }
+        th.text-center, td.text-center { text-align: center; }
+        td { border-bottom: 1px solid var(--gray-100); border-right: 1px solid var(--gray-100); }
+        
+        th span.subtext { font-size: 10px; color: var(--gray-400); font-weight: 400; display: block; }
+        
+        .bg-gray-header { background: var(--gray-100); }
+        .bg-gray-cell { background: rgba(249, 250, 251, 0.5); font-weight: 700; }
+        
+        tbody tr { transition: background-color 0.2s; }
+        tbody tr:hover { background-color: var(--gray-50) !important; }
+        .row-pass { background-color: rgba(236, 253, 245, 0.3); } /* emerald-50/30 */
+        
+        .font-medium { font-weight: 500; }
+        .font-bold { font-weight: 700; }
+        .text-gray-900 { color: var(--gray-900); }
+        .text-red { color: var(--red-500); font-weight: 500; }
+
+        .badge { padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.75rem; }
+        .badge-pass { background: var(--green-100); color: var(--green-700); }
+        .badge-fail { background: var(--red-100); color: var(--red-700); }
+
+        /* Sticky Action Column */
+        .sticky-col { position: sticky; right: 0; box-shadow: -5px 0 10px rgba(0,0,0,0.03); border-left: 1px solid var(--gray-100); }
+        th.sticky-col { background: var(--gray-50); border-left: 1px solid var(--gray-200); }
+        .bg-white { background: white; }
+        .bg-emerald-50 { background: var(--emerald-50); }
+
+        .btn-print {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;
+            background: var(--teal-600); color: white; padding: 0.375rem 0.75rem; border-radius: 0.25rem;
+            font-size: 0.75rem; font-weight: 600; transition: background 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .btn-print:hover { background: var(--teal-700); }
+        .btn-print:active { transform: scale(0.95); }
+
+        /* --- TOAST NOTIFICATIONS --- */
+        #toast-container { position: fixed; bottom: 1rem; right: 1rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast {
+            display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem;
+            border-radius: 0.25rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            color: white; font-size: 0.875rem; font-weight: 500;
+            transition: all 0.3s ease-in-out; transform: translateY(100%); opacity: 0;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast-success { background-color: var(--emerald-600); }
+        .toast-warning { background-color: var(--orange-500); }
+
+        /* Animations */
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .icon-spin { animation: spin 1s linear infinite; }
+
+        /* Media Queries */
+        @media (min-width: 768px) {
+            body { padding: 2rem; }
+            .header { padding: 2rem; }
+            .header-content { flex-direction: row; align-items: flex-start; }
+            .header-title { font-size: 1.875rem; }
+            .header-subtitle { font-size: 1.25rem; }
+            .header-desc { font-size: 1rem; }
+            .stats-box { width: auto; }
+        }
+        @media (max-width: 639px) {
+            .btn-text-hidden { display: none; } /* Hide text on small screens for zip btn */
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <div class="main-container">
+        
+        <!-- Header Section -->
+        <div class="header">
+            <div class="header-content">
+                <div class="header-title-wrapper">
+                    <h1 class="header-title">Wafy Foundation School</h1>
+                    <h2 class="header-subtitle">Annual Examination - March 2026</h2>
+                    <h3 id="header-subtitle" class="header-desc">Mark List (FDN-A) PMSA Wafy College, Kattilangadi</h3>
+                </div>
+                
+                <!-- Class Pass/Fail Stats Box -->
+                <div class="stats-box">
+                    <div class="stat-item">
+                        <div class="stat-label">Passed</div>
+                        <div id="stat-passed" class="stat-value passed">0</div>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <div class="stat-label">Failed</div>
+                        <div id="stat-failed" class="stat-value failed">0</div>
+                    </div>
+                </div>
+            </div>
+                
+            <!-- Action Controls (Responsive Dropdowns) -->
+            <div class="actions-bar">
+                <!-- Class Selection Dropdown -->
+                <div class="dropdown-container">
+                    <button onclick="toggleDropdown('classDropdown')" class="btn btn-class">
+                        <i class="ph ph-chalkboard-teacher" style="font-size: 1.125rem;"></i>
+                        <span id="current-class-label">Class: FDN-A</span>
+                        <i class="ph ph-caret-down" style="margin-left: auto;"></i>
+                    </button>
+                    <div id="classDropdown" class="dropdown-menu hidden">
+                        <button onclick="switchClass('FDN-A')" class="dropdown-item hover-emerald">Foundation A</button>
+                        <button onclick="switchClass('FDN-B')" class="dropdown-item hover-emerald">Foundation B</button>
+                    </div>
+                </div>
+
+                <!-- Download PDF Dropdown -->
+                <div class="dropdown-container">
+                    <button onclick="toggleDropdown('pdfDropdown')" class="btn btn-pdf">
+                        <i class="ph ph-file-pdf" style="font-size: 1.125rem;"></i>
+                        Download PDF
+                        <i class="ph ph-caret-down" style="margin-left: 0.25rem;"></i>
+                    </button>
+                    <div id="pdfDropdown" class="dropdown-menu hidden">
+                        <button onclick="downloadClassReport('ALL')" class="dropdown-item hover-emerald"><i class="ph ph-table" style="color: var(--emerald-600);"></i> Full Class Report</button>
+                        <button onclick="downloadClassReport('F')" class="dropdown-item hover-red"><i class="ph ph-warning-circle" style="color: var(--red-500);"></i> Failed Students</button>
+                        <button onclick="downloadClassReport('P')" class="dropdown-item hover-green"><i class="ph ph-check-circle" style="color: var(--green-500);"></i> Passed Students</button>
+                        <button onclick="downloadFailedSubjectsReport()" class="dropdown-item hover-orange"><i class="ph ph-books" style="color: var(--orange-500);"></i> Failed Subjects</button>
+                        <!-- NEW: Rank List and Subject Analysis -->
+                        <button onclick="downloadRankList()" class="dropdown-item hover-emerald"><i class="ph ph-medal" style="color: var(--emerald-500);"></i> Rank List (All Classes)</button>
+                        <button onclick="downloadSubjectAnalysis()" class="dropdown-item hover-teal"><i class="ph ph-chart-bar" style="color: var(--teal-500);"></i> Subject Analysis</button>
+                    </div>
+                </div>
+
+                <!-- Download ZIP Dropdown -->
+                <div class="dropdown-container">
+                    <button id="mainZipBtn" onclick="toggleDropdown('zipDropdown')" class="btn btn-zip">
+                        <i class="ph ph-file-zip" style="font-size: 1.125rem;"></i>
+                        <span class="btn-text-hidden">Download ZIP</span>
+                        <i class="ph ph-caret-down" style="margin-left: 0.25rem;"></i>
+                    </button>
+                    <div id="zipDropdown" class="dropdown-menu hidden">
+                        <button onclick="downloadAllPDF('ALL')" class="dropdown-item hover-teal"><i class="ph ph-files" style="color: var(--teal-600);"></i> Zip All Marksheets</button>
+                        <button onclick="downloadAllPDF('F')" class="dropdown-item hover-red"><i class="ph ph-warning-circle" style="color: var(--red-500);"></i> Zip Failed Students</button>
+                        <button onclick="downloadAllPDF('P')" class="dropdown-item hover-green"><i class="ph ph-check-circle" style="color: var(--green-500);"></i> Zip Passed Students</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="text-center">Reg.No</th>
+                        <th>Name of student</th>
+                        <th class="text-center">Arabic<span class="subtext">40</span></th>
+                        <th class="text-center">MLM 2<span class="subtext">40</span></th>
+                        <th class="text-center">English<span class="subtext">40</span></th>
+                        <th class="text-center">Hindi<span class="subtext">40</span></th>
+                        <th class="text-center">SS<span class="subtext">40</span></th>
+                        <th class="text-center">Maths<span class="subtext">40</span></th>
+                        <th class="text-center">Physics<span class="subtext">20</span></th>
+                        <th class="text-center">Chemistry<span class="subtext">20</span></th>
+                        <th class="text-center">Biology<span class="subtext">20</span></th>
+                        <th class="text-center bg-gray-header">TOTAL<span class="subtext" style="color: var(--gray-500);">300</span></th>
+                        <th class="text-center bg-gray-header">Pct (%)<span class="subtext" style="color: var(--gray-500);">100</span></th>
+                        <th class="text-center">Status</th>
+                        <th class="text-center sticky-col">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="student-table-body">
+                    <!-- Data will be populated here by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Custom Toast Notification Function (Replaces standard alerts)
+        function showToast(message, isWarning = false) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            toast.className = `toast ${isWarning ? 'toast-warning' : 'toast-success'}`;
+            const iconClass = isWarning ? 'ph-warning-circle' : 'ph-info';
+            
+            toast.innerHTML = `<i class="ph ${iconClass}" style="font-size: 1.125rem;"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            // Trigger animation in
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+            
+            // Trigger animation out
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Database storing both Foundation A and Foundation B records
+        const classData = {
+            'FDN-A': [
+                { regNo: 1, name: "MUHAMMED SHIHAB KALLIYATH", marks: { Arabic: 38, "MLM 2": 39, English: 37, Hindi: 26, SS: 24, Maths: 29, Physics: 18, Chemistry: 14, Biology: 15 }, total: 240, pct: 80.0, status: "P" },
+                { regNo: 2, name: "FADHI AHAMMED T", marks: { Arabic: 39, "MLM 2": 34, English: 37, Hindi: 33, SS: 39, Maths: 38, Physics: 20, Chemistry: 19, Biology: 18 }, total: 277, pct: 92.3, status: "P" },
+                { regNo: 3, name: "MUHAMMED RAEES.P", marks: { Arabic: 19, "MLM 2": 21, English: 12, Hindi: 4, SS: 12, Maths: 13, Physics: 5, Chemistry: 3, Biology: 4 }, total: 93, pct: 31.0, status: "F" },
+                { regNo: 4, name: "SAFEER MUHAMMED C A", marks: { Arabic: 40, "MLM 2": 28, English: 33, Hindi: 24, SS: 31, Maths: 36, Physics: 17, Chemistry: 16, Biology: 17 }, total: 242, pct: 80.7, status: "P" },
+                { regNo: 5, name: "SAFRAS PT", marks: { Arabic: 27, "MLM 2": 20, English: 16, Hindi: 21, SS: 15, Maths: 15, Physics: 8, Chemistry: 7, Biology: 6 }, total: 135, pct: 45.0, status: "P" },
+                { regNo: 6, name: "NASIH SAIFUDHEEN", marks: { Arabic: 32, "MLM 2": 24, English: 38, Hindi: 32, SS: 13, Maths: 26, Physics: 15, Chemistry: 9, Biology: 14 }, total: 203, pct: 67.7, status: "P" },
+                { regNo: 7, name: "MUHAMMAD ANSHIF T", marks: { Arabic: 36, "MLM 2": 28, English: 37, Hindi: 27, SS: 28, Maths: 23, Physics: 17, Chemistry: 12, Biology: 16 }, total: 224, pct: 74.7, status: "P" },
+                { regNo: 8, name: "MUHAMMAD RISWAN E K", marks: { Arabic: 33, "MLM 2": 31, English: 27, Hindi: 12, SS: 13, Maths: 19, Physics: 11, Chemistry: 9, Biology: 11 }, total: 166, pct: 55.3, status: "P" },
+                { regNo: 9, name: "AMJAD SHAMMAS PV", marks: { Arabic: 31, "MLM 2": 36, English: 18, Hindi: 14, SS: 21, Maths: 29, Physics: 15, Chemistry: 13, Biology: 12 }, total: 189, pct: 63.0, status: "P" },
+                { regNo: 10, name: "MUHAMMED SHADIN PV", marks: { Arabic: 30, "MLM 2": 35, English: 26, Hindi: 24, SS: 14, Maths: 23, Physics: 12, Chemistry: 6, Biology: 6 }, total: 176, pct: 58.7, status: "P" },
+                { regNo: 11, name: "MUHAMMED SAFIL CV", marks: { Arabic: 34, "MLM 2": 28, English: 20, Hindi: 23, SS: 14, Maths: 26, Physics: 12, Chemistry: 16, Biology: 10 }, total: 183, pct: 61.0, status: "P" },
+                { regNo: 12, name: "LUQMAN", marks: { Arabic: 29, "MLM 2": 23, English: 23, Hindi: 16, SS: 17, Maths: 28, Physics: 7, Chemistry: 6, Biology: 13 }, total: 162, pct: 54.0, status: "P" },
+                { regNo: 13, name: "ADINAN SALEEM", marks: { Arabic: 20, "MLM 2": 12, English: 14, Hindi: 17, SS: 12, Maths: 18, Physics: 7, Chemistry: 7, Biology: 11 }, total: 118, pct: 39.3, status: "P" },
+                { regNo: 14, name: "RAJIH RAYYAN", marks: { Arabic: 36, "MLM 2": 35, English: 27, Hindi: 22, SS: 18, Maths: 12, Physics: 6, Chemistry: 12, Biology: 13 }, total: 181, pct: 60.3, status: "P" },
+                { regNo: 15, name: "THOHA BISHR", marks: { Arabic: 22, "MLM 2": 7, English: 13, Hindi: 4, SS: 5, Maths: 9, Physics: 2, Chemistry: 1, Biology: 3 }, total: 66, pct: 22.0, status: "F" },
+                { regNo: 16, name: "ABDHUL KAREEM AV", marks: { Arabic: 20, "MLM 2": 26, English: 19, Hindi: 2, SS: 6, Maths: 15, Physics: 6, Chemistry: 5, Biology: 7 }, total: 106, pct: 35.3, status: "F" },
+                { regNo: 17, name: "MUHAMMED NAZIH", marks: { Arabic: 34, "MLM 2": 34, English: 26, Hindi: 25, SS: 17, Maths: 16, Physics: 9, Chemistry: 7, Biology: 7 }, total: 175, pct: 58.3, status: "P" },
+                { regNo: 18, name: "MUHAMMED HADI. PP", marks: { Arabic: 21, "MLM 2": 18, English: 13, Hindi: 15, SS: 10, Maths: 5, Physics: 4, Chemistry: 2, Biology: 4 }, total: 92, pct: 30.7, status: "F" },
+                { regNo: 19, name: "SAYYID ABDUL BASITH", marks: { Arabic: 26, "MLM 2": 18, English: 22, Hindi: 21, SS: 17, Maths: 20, Physics: 11, Chemistry: 13, Biology: 9 }, total: 157, pct: 52.3, status: "P" },
+                { regNo: 20, name: "MUHAMMED BASITH.N", marks: { Arabic: 14, "MLM 2": 19, English: 15, Hindi: 12, SS: 7, Maths: 12, Physics: 3, Chemistry: 3, Biology: 4 }, total: 89, pct: 29.7, status: "F" },
+                { regNo: 21, name: "MUHAMMED ZAYAN VP", marks: { Arabic: 26, "MLM 2": 25, English: 16, Hindi: 13, SS: 16, Maths: 12, Physics: 12, Chemistry: 11, Biology: 14 }, total: 145, pct: 48.3, status: "P" },
+                { regNo: 22, name: "NIBRAS AHMMED T", marks: { Arabic: 29, "MLM 2": 17, English: 21, Hindi: 17, SS: 12, Maths: 17, Physics: 1, Chemistry: 4, Biology: 7 }, total: 125, pct: 41.7, status: "F" },
+                { regNo: 23, name: "MUHAMMED IQBAL", marks: { Arabic: 12, "MLM 2": 1, English: 12, Hindi: 12, SS: 3, Maths: 5, Physics: 6, Chemistry: 6, Biology: 6 }, total: 61, pct: 20.3, status: "F" },
+                { regNo: 24, name: "MUHAMMED RIZWAN", marks: { Arabic: 33, "MLM 2": 37, English: 19, Hindi: 27, SS: 32, Maths: 27, Physics: 18, Chemistry: 13, Biology: 17 }, total: 223, pct: 74.3, status: "P" },
+                { regNo: 25, name: "MUHAMMAD ASHFIN", marks: { Arabic: 35, "MLM 2": 36, English: 24, Hindi: 32, SS: 17, Maths: 24, Physics: 10, Chemistry: 6, Biology: 8 }, total: 192, pct: 64.0, status: "P" },
+                { regNo: 26, name: "MUHAMMED ABDULHADI KP", marks: { Arabic: 39, "MLM 2": 19, English: 17, Hindi: 13, SS: 7, Maths: 9, Physics: 7, Chemistry: 4, Biology: 6 }, total: 121, pct: 40.3, status: "F" }
+            ],
+            'FDN-B': [
+                { regNo: 1, name: "AJWAD K", marks: { Arabic: 40, "MLM 2": 38, English: 35, Hindi: 30, SS: 20, Maths: 18, Physics: 14, Chemistry: 16, Biology: 16 }, total: 211, pct: 70.0, status: "P" },
+                { regNo: 2, name: "MOHAMMED AIMAN", marks: { Arabic: 33, "MLM 2": 26, English: 23, Hindi: 15, SS: 16, Maths: 20, Physics: 11, Chemistry: 16, Biology: 11 }, total: 160, pct: 53.0, status: "P" },
+                { regNo: 3, name: "INSAF MURAD K", marks: { Arabic: 26, "MLM 2": 36, English: 23, Hindi: 20, SS: 12, Maths: 10, Physics: 7, Chemistry: 11, Biology: 13 }, total: 158, pct: 52.7, status: "F" },
+                { regNo: 4, name: "SAJAD.P", marks: { Arabic: 31, "MLM 2": 30, English: 18, Hindi: 21, SS: 14, Maths: 23, Physics: 8, Chemistry: 12, Biology: 13 }, total: 157, pct: 52.0, status: "P" },
+                { regNo: 5, name: "AFSWAH V N", marks: { Arabic: 20, "MLM 2": 33, English: 17, Hindi: 12, SS: 19, Maths: 10, Physics: 6, Chemistry: 6, Biology: 9.5 }, total: 132.5, pct: 44.2, status: "F" },
+                { regNo: 6, name: "MUHAMMED YASIN SHEREEF", marks: { Arabic: 13, "MLM 2": 20, English: 28, Hindi: 13, SS: 17, Maths: 20, Physics: 11, Chemistry: 18, Biology: 13 }, total: 140, pct: 47.0, status: "P" },
+                { regNo: 7, name: "MUHAMMED FIZAN.N", marks: { Arabic: 29, "MLM 2": 36, English: 35, Hindi: 35, SS: 34, Maths: 30, Physics: 19, Chemistry: 16, Biology: 18 }, total: 234, pct: 78.0, status: "P" },
+                { regNo: 8, name: "NABHAN.M", marks: { Arabic: 29, "MLM 2": 33, English: 37, Hindi: 17, SS: 23, Maths: 17, Physics: 8, Chemistry: 8, Biology: 10 }, total: 182, pct: 60.7, status: "P" },
+                { regNo: 9, name: "MUHAMMAD SHAMSUDHEEN .T", marks: { Arabic: 30, "MLM 2": 29, English: 15, Hindi: 23, SS: 12, Maths: 19, Physics: 10, Chemistry: 8, Biology: 7 }, total: 146, pct: 49.0, status: "P" },
+                { regNo: 10, name: "MUHAMMED AMAAN S", marks: { Arabic: 29, "MLM 2": 37, English: 31, Hindi: 24, SS: 20, Maths: 16, Physics: 12, Chemistry: 12, Biology: 13 }, total: 181, pct: 60.0, status: "P" },
+                { regNo: 11, name: "MUHAMMED HANAN P", marks: { Arabic: 23, "MLM 2": 20, English: 12, Hindi: 8, SS: 10, Maths: 16, Physics: 5, Chemistry: 2, Biology: 6 }, total: 96, pct: 32.0, status: "F" },
+                { regNo: 12, name: "OMAR RAFAN", marks: { Arabic: 12, "MLM 2": 5, English: 12, Hindi: 12, SS: 14, Maths: 15, Physics: 3, Chemistry: 4, Biology: 6 }, total: 77, pct: 25.7, status: "F" },
+                { regNo: 13, name: "MUHAMMAD IHSAN M", marks: { Arabic: 14, "MLM 2": 22, English: 14, Hindi: 12, SS: 13, Maths: 18, Physics: 4, Chemistry: 6, Biology: 7 }, total: 103, pct: 34.3, status: "F" },
+                { regNo: 14, name: "MUHAMMAD IRFAN.V", marks: { Arabic: 36, "MLM 2": 30, English: 19, Hindi: 27, SS: 13, Maths: 25, Physics: 6, Chemistry: 3, Biology: 7 }, total: 166, pct: 55.3, status: "F" },
+                { regNo: 15, name: "MUNAWAR ALI KT", marks: { Arabic: 24, "MLM 2": 29, English: 18, Hindi: 14, SS: 18, Maths: 15, Physics: 9, Chemistry: 7, Biology: 11 }, total: 145, pct: 48.3, status: "P" },
+                { regNo: 16, name: "MOHAMMED IZAAN ASHRAF", marks: { Arabic: 27, "MLM 2": 33, English: 17, Hindi: 12, SS: 14, Maths: 11, Physics: 6, Chemistry: 2, Biology: 7 }, total: 129, pct: 43.0, status: "F" },
+                { regNo: 17, name: "MOHAMMED MISBAH.PC", marks: { Arabic: 37, "MLM 2": 32, English: 29, Hindi: 12, SS: 12, Maths: 13, Physics: 6, Chemistry: 10, Biology: 8 }, total: 151, pct: 50.0, status: "P" },
+                { regNo: 18, name: "SHABIN KT", marks: { Arabic: 19, "MLM 2": 28, English: 13, Hindi: 17, SS: 15, Maths: 11, Physics: 6, Chemistry: 6, Biology: 7 }, total: 122, pct: 40.7, status: "F" },
+                { regNo: 19, name: "MUHEEN PT", marks: { Arabic: 24, "MLM 2": 12, English: 20, Hindi: 15, SS: 12, Maths: 12, Physics: 9, Chemistry: 6, Biology: 7 }, total: 114, pct: 38.0, status: "F" },
+                { regNo: 20, name: "AHAMMED ABAN KUTTASSERY", marks: { Arabic: 26, "MLM 2": 38, English: 24, Hindi: 21, SS: 17, Maths: 26, Physics: 16, Chemistry: 12, Biology: 12 }, total: 180, pct: 60.0, status: "P" },
+                { regNo: 21, name: "MOHAMMED SINAN P", marks: { Arabic: 22, "MLM 2": 23, English: 12, Hindi: 12, SS: 15, Maths: 8, Physics: 7, Chemistry: 9, Biology: 8 }, total: 116, pct: 38.7, status: "F" },
+                { regNo: 22, name: "ASHMIL P", marks: { Arabic: 21, "MLM 2": 19, English: 12, Hindi: 12, SS: 4, Maths: 12, Physics: 1, Chemistry: 2, Biology: 4.5 }, total: 87.5, pct: 29.2, status: "F" },
+                { regNo: 23, name: "RAZIN AHAMMED", marks: { Arabic: 34, "MLM 2": 27, English: 28, Hindi: 31, SS: 17, Maths: 21, Physics: 10, Chemistry: 10, Biology: 10 }, total: 178, pct: 59.0, status: "P" },
+                { regNo: 24, name: "MUHAMMED SAHL.V.K", marks: { Arabic: 22, "MLM 2": 25, English: 21, Hindi: 12, SS: 12, Maths: 16, Physics: 3, Chemistry: 4, Biology: 8 }, total: 123, pct: 41.0, status: "F" },
+                { regNo: 25, name: "MUHAMMED SINAN.V.K", marks: { Arabic: 22, "MLM 2": 18, English: 12, Hindi: 12, SS: 12, Maths: 13, Physics: 6, Chemistry: 8, Biology: 8 }, total: 103, pct: 34.0, status: "P" },
+                { regNo: 26, name: "SAYYID MUHAMMED ANFAL", marks: { Arabic: 20, "MLM 2": 12, English: 14, Hindi: 4, SS: 12, Maths: 2, Physics: 6, Chemistry: 7, Biology: 8 }, total: 85, pct: 28.3, status: "F" },
+                { regNo: 27, name: "MUHAMMED RUWAIF", marks: { Arabic: 25, "MLM 2": 17.5, English: 16, Hindi: 8, SS: 4, Maths: 8, Physics: 5, Chemistry: 10, Biology: 4.5 }, total: 88.5, pct: 29.5, status: "F" },
+                { regNo: 28, name: "FOUZAN KUNHI MOHAMED P", marks: { Arabic: 21, "MLM 2": 18, English: 18, Hindi: 13, SS: 12, Maths: 12, Physics: 4, Chemistry: 4, Biology: 7 }, total: 109, pct: 36.3, status: "F" },
+                { regNo: 29, name: "MUHAMMAD HIRAZ AZAM", marks: { Arabic: 17, "MLM 2": 20, English: 12, Hindi: 12, SS: 4, Maths: 15, Physics: 4, Chemistry: 5, Biology: 4 }, total: 93, pct: 31.0, status: "F" },
+                { regNo: 30, name: "MUHAMMED ANSIL MK", marks: { Arabic: 32, "MLM 2": 28, English: 18, Hindi: 15, SS: 12, Maths: 11, Physics: 6, Chemistry: 8, Biology: 10 }, total: 140, pct: 46.7, status: "F" }
+            ]
+        };
+
+        // State Manager
+        let currentClass = 'FDN-A';
+
+        // Dropdown Toggle Logic
+        function toggleDropdown(id) {
+            const dropdowns = ['classDropdown', 'pdfDropdown', 'zipDropdown'];
+            dropdowns.forEach(d => {
+                const el = document.getElementById(d);
+                if (d === id) {
+                    el.classList.toggle('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+        }
+
+        // Close dropdowns when clicking outside
+        window.addEventListener('click', function(e) {
+            if (!e.target.closest('.dropdown-container')) {
+                ['classDropdown', 'pdfDropdown', 'zipDropdown'].forEach(id => {
+                    document.getElementById(id).classList.add('hidden');
+                });
+            }
+        });
+
+        // Switch Class Tabs function
+        function switchClass(className) {
+            currentClass = className;
+            
+            // Update Title and Label
+            document.getElementById('header-subtitle').innerText = `Mark List (${currentClass}) PMSA Wafy College, Kattilangadi`;
+            document.getElementById('current-class-label').innerText = `Class: ${currentClass}`;
+
+            // Close dropdown
+            document.getElementById('classDropdown').classList.add('hidden');
+
+            renderTable();
+        }
+
+        // Populate Table Function
+        function renderTable() {
+            const tbody = document.getElementById('student-table-body');
+            const students = classData[currentClass];
+            let html = '';
+            
+            // Update Pass/Fail Stats
+            let passCount = 0;
+            let failCount = 0;
+
+            students.forEach((student) => {
+                const isFail = student.status === 'F';
+                if (isFail) failCount++; else passCount++;
+                
+                // Threshold definition based on image data references (<12 is red for 40, <6 is red for 20)
+                const redTextClass = "text-red";
+                const rowHighlight = isFail ? "" : "row-pass";
+                const statusBadge = isFail 
+                    ? `<span class="badge badge-fail">F</span>` 
+                    : `<span class="badge badge-pass">P</span>`;
+
+                html += `
+                    <tr class="${rowHighlight}">
+                        <td class="text-center font-medium">${student.regNo}</td>
+                        <td class="font-medium text-gray-900">${student.name}</td>
+                        <td class="text-center ${student.marks.Arabic < 12 ? redTextClass : ''}">${student.marks.Arabic}</td>
+                        <td class="text-center ${student.marks["MLM 2"] < 12 ? redTextClass : ''}">${student.marks["MLM 2"]}</td>
+                        <td class="text-center ${student.marks.English < 12 ? redTextClass : ''}">${student.marks.English}</td>
+                        <td class="text-center ${student.marks.Hindi < 12 ? redTextClass : ''}">${student.marks.Hindi}</td>
+                        <td class="text-center ${student.marks.SS < 12 ? redTextClass : ''}">${student.marks.SS}</td>
+                        <td class="text-center ${student.marks.Maths < 12 ? redTextClass : ''}">${student.marks.Maths}</td>
+                        <td class="text-center ${student.marks.Physics < 6 ? redTextClass : ''}">${student.marks.Physics}</td>
+                        <td class="text-center ${student.marks.Chemistry < 6 ? redTextClass : ''}">${student.marks.Chemistry}</td>
+                        <td class="text-center ${student.marks.Biology < 6 ? redTextClass : ''}">${student.marks.Biology}</td>
+                        <td class="text-center font-bold bg-gray-cell">${student.total}</td>
+                        <td class="text-center font-bold bg-gray-cell">${student.pct}</td>
+                        <td class="text-center">${statusBadge}</td>
+                        <td class="text-center sticky-col ${isFail ? 'bg-white' : 'bg-emerald-50'}">
+                            <button onclick="downloadSinglePDF(${student.regNo})" class="btn-print">
+                                <i class="ph ph-download-simple"></i> Print
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+            
+            // Render Stats in UI
+            document.getElementById('stat-passed').innerText = passCount;
+            document.getElementById('stat-failed').innerText = failCount;
+        }
+
+        // --- UPDATED: Download Class List / Failed Students PDF Logic with Website Styling ---
+        function downloadClassReport(filterStatus = 'ALL') {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait' }); 
+            
+            // Filter logic
+            let students = classData[currentClass];
+            let reportTitleExt = "Full Class Report";
+            let fileSuffix = "Full_Class_Report";
+
+            if (filterStatus === 'F') {
+                students = students.filter(s => s.status === 'F');
+                reportTitleExt = "Failed Students Only";
+                fileSuffix = "Failed_Students_Report";
+            } else if (filterStatus === 'P') {
+                students = students.filter(s => s.status === 'P');
+                reportTitleExt = "Passed Students Only";
+                fileSuffix = "Passed_Students_Report";
+            }
+
+            // Prevent blank empty report error using our custom toast
+            if(students.length === 0) {
+                showToast(`No ${filterStatus === 'F' ? 'failed' : filterStatus === 'P' ? 'passed' : ''} students found in this class!`, true);
+                return;
+            }
+
+            const pageWidth = doc.internal.pageSize.getWidth();
+            
+            // Draw Title matching the website's color scheme
+            doc.setFontSize(15);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(6, 78, 59); // Emerald 900
+            doc.text("Wafy Foundation School Annual Examination- March 2026", pageWidth / 2, 16, { align: "center" });
+            
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(50, 50, 50); // Gray 700
+            doc.text(`Mark List (${currentClass}) PMSA Wafy College, Kattilangadi - ${reportTitleExt}`, pageWidth / 2, 23, { align: "center" });
+
+            // Prepare Table Data mapping
+            const tableBody = students.map(s => [
+                s.regNo, s.name, s.marks.Arabic, s.marks["MLM 2"], s.marks.English, s.marks.Hindi, s.marks.SS, s.marks.Maths, s.marks.Physics, s.marks.Chemistry, s.marks.Biology, s.total, s.pct, s.status
+            ]);
+
+            // Create AutoTable with updated beautiful styling
+            doc.autoTable({
+                startY: 28,
+                head: [[
+                    'Reg.No', 'Name of student', 
+                    'Arabic\n40', 'MLM 2\n40', 'English\n40', 'Hindi\n40', 'SS\n40', 'Maths\n40', 
+                    'Physics\n20', 'Chemistry\n20', 'Biology\n20', 
+                    'TOTAL\n300', 'Pct (%)\n100', 'Status'
+                ]],
+                body: tableBody,
+                theme: 'grid',
+                styles: {
+                    fontSize: 8, 
+                    cellPadding: 2,
+                    textColor: [55, 65, 81], // gray-700
+                    lineColor: [229, 231, 235], // gray-200
+                    lineWidth: 0.1,
+                    fontStyle: 'normal'
+                },
+                headStyles: {
+                    fillColor: [15, 118, 110], // Teal 700 (matches website header)
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    halign: 'center',
+                    valign: 'middle'
+                },
+                alternateRowStyles: {
+                    fillColor: [249, 250, 251] // gray-50 (matches alternating table look)
+                },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 10, fontStyle: 'bold' },
+                    1: { halign: 'left', cellWidth: 35, fontStyle: 'bold', textColor: [17, 24, 39] },
+                    // All marks and totals centered
+                    2: { halign: 'center' }, 3: { halign: 'center' }, 4: { halign: 'center' },
+                    5: { halign: 'center' }, 6: { halign: 'center' }, 7: { halign: 'center' },
+                    8: { halign: 'center' }, 9: { halign: 'center' }, 10: { halign: 'center' },
+                    11: { halign: 'center', fontStyle: 'bold', fillColor: [243, 244, 246] }, // Gray-100 total column
+                    12: { halign: 'center', fontStyle: 'bold', fillColor: [243, 244, 246] },
+                    13: { halign: 'center', fontStyle: 'bold' }
+                },
+                didParseCell: function(data) {
+                    // Check and apply red/green color logic for marks & status
+                    if (data.section === 'body') {
+                        const colIdx = data.column.index;
+                        const val = data.cell.raw;
+                        let isFailed = false;
+
+                        // 40 max marks thresholds (idx 2 to 7)
+                        if (colIdx >= 2 && colIdx <= 7 && val < 12) isFailed = true;
+                        // 20 max marks thresholds (idx 8 to 10)
+                        if (colIdx >= 8 && colIdx <= 10 && val < 6) isFailed = true;
+
+                        if (isFailed) {
+                            data.cell.styles.textColor = [220, 38, 38]; // Apply Red text color
+                        }
+                        
+                        // Handle Status Column (P=Green, F=Red)
+                        if (colIdx === 13) {
+                            if (val === 'F') {
+                                data.cell.styles.textColor = [220, 38, 38]; // Red text for Fail
+                            } else {
+                                data.cell.styles.textColor = [22, 163, 74]; // Green text for Pass
+                            }
+                        }
+                    }
+                }
+            });
+
+            doc.save(`${currentClass}_${fileSuffix}_2026.pdf`);
+            showToast("Report generated successfully!");
+        }
+
+        // --- NEW: Download Failed Subjects Categorized Report ---
+        function downloadFailedSubjectsReport() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait' }); 
+            const students = classData[currentClass];
+            
+            const subjects40 = ['Arabic', 'MLM 2', 'English', 'Hindi', 'SS', 'Maths'];
+            const subjects20 = ['Physics', 'Chemistry', 'Biology'];
+            
+            const studentsWithFails = [];
+
+            // Calculate failed subjects for each student
+            students.forEach(student => {
+                let failedSubjects = [];
+                
+                subjects40.forEach(sub => {
+                    if (student.marks[sub] < 12) failedSubjects.push(sub);
+                });
+                
+                subjects20.forEach(sub => {
+                    if (student.marks[sub] < 6) failedSubjects.push(sub);
+                });
+                
+                if (failedSubjects.length > 0) {
+                    studentsWithFails.push({
+                        regNo: student.regNo,
+                        name: student.name,
+                        failedSubjects: failedSubjects,
+                        failCount: failedSubjects.length
+                    });
+                }
+            });
+
+            if (studentsWithFails.length === 0) {
+                showToast("No students failed any subjects in this class!", true);
+                return;
+            }
+
+            // Group by number of failed subjects
+            const grouped = {};
+            studentsWithFails.forEach(s => {
+                if (!grouped[s.failCount]) grouped[s.failCount] = [];
+                grouped[s.failCount].push(s);
+            });
+
+            const pageWidth = doc.internal.pageSize.getWidth();
+            
+            // Draw Headers
+            doc.setFontSize(15);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(6, 78, 59); // Emerald 900
+            doc.text("Wafy Foundation School Annual Examination- March 2026", pageWidth / 2, 16, { align: "center" });
+            
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(50, 50, 50); 
+            doc.text(`Mark List (${currentClass}) PMSA Wafy College, Kattilangadi - Failed Subjects List`, pageWidth / 2, 23, { align: "center" });
+
+            // Prepare AutoTable Body with Groupings
+            const tableBody = [];
+            
+            // Sort keys descending (e.g., 5 subjects failed, then 4, then 3...)
+            const failCounts = Object.keys(grouped).map(Number).sort((a, b) => b - a);
+
+            failCounts.forEach(count => {
+                // Add Group Header Row
+                tableBody.push([
+                    {
+                        content: `Failed ${count} Subject${count > 1 ? 's' : ''} (Total Students: ${grouped[count].length})`,
+                        colSpan: 3,
+                        styles: { fillColor: [243, 244, 246], fontStyle: 'bold', textColor: [17, 24, 39], halign: 'left' }
+                    }
+                ]);
+                
+                // Add Students for this group
+                grouped[count].forEach(student => {
+                    tableBody.push([
+                        student.regNo,
+                        student.name,
+                        student.failedSubjects.join(', ')
+                    ]);
+                });
+            });
+
+            doc.autoTable({
+                startY: 28,
+                head: [['Reg.No', 'Name of student', 'Failed Subjects']],
+                body: tableBody,
+                theme: 'grid',
+                styles: {
+                    fontSize: 9, 
+                    cellPadding: 3,
+                    textColor: [55, 65, 81],
+                    lineColor: [229, 231, 235],
+                    lineWidth: 0.1
+                },
+                headStyles: {
+                    fillColor: [15, 118, 110],
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    halign: 'left'
+                },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 15, fontStyle: 'bold' },
+                    1: { halign: 'left', cellWidth: 50, fontStyle: 'bold', textColor: [17, 24, 39] },
+                    2: { halign: 'left', textColor: [220, 38, 38] } // Failed subjects in red text
+                }
+            });
+
+            doc.save(`${currentClass}_Failed_Subjects_List_2026.pdf`);
+            showToast("Failed subjects report generated!");
+        }
+
+        // --- NEW: Combined Rank List Report ---
+        function downloadRankList() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait' });
+            
+            // Combine all students from all classes
+            let allStudents = [];
+            for (const [className, students] of Object.entries(classData)) {
+                students.forEach(s => allStudents.push({ ...s, className }));
+            }
+            
+            // Separate passed and failed students
+            let passed = allStudents.filter(s => s.status === 'P');
+            let failed = allStudents.filter(s => s.status === 'F');
+            
+            // Sort both arrays descending by total score
+            passed.sort((a, b) => b.total - a.total);
+            failed.sort((a, b) => b.total - a.total);
+            
+            // Calculate standard competition ranks for passed students
+            let currentRank = 1;
+            for (let i = 0; i < passed.length; i++) {
+                if (i > 0 && passed[i].total < passed[i-1].total) {
+                    currentRank = i + 1;
+                }
+                passed[i].rank = currentRank;
+            }
+            
+            // Failed students get "-" rank
+            failed.forEach(s => s.rank = "-");
+            
+            const tableData = [...passed, ...failed].map(s => [
+                s.rank, s.className, s.regNo, s.name, s.total, s.pct + '%', s.status
+            ]);
+            
+            const pageWidth = doc.internal.pageSize.getWidth();
+            doc.setFontSize(15);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(6, 78, 59);
+            doc.text("Wafy Foundation School Annual Examination - March 2026", pageWidth / 2, 16, { align: "center" });
+            
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(50, 50, 50);
+            doc.text("Combined Rank List (FDN-A & FDN-B)", pageWidth / 2, 23, { align: "center" });
+
+            doc.autoTable({
+                startY: 28,
+                head: [['Rank', 'Class', 'Reg.No', 'Name of student', 'Total\n300', 'Pct', 'Status']],
+                body: tableData,
+                theme: 'grid',
+                styles: { fontSize: 8, cellPadding: 3, textColor: [55, 65, 81], lineColor: [229, 231, 235], lineWidth: 0.1 },
+                headStyles: { fillColor: [15, 118, 110], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+                columnStyles: {
+                    0: { halign: 'center', fontStyle: 'bold' },
+                    1: { halign: 'center', fontStyle: 'bold', textColor: [15, 118, 110] },
+                    2: { halign: 'center' },
+                    3: { halign: 'left', fontStyle: 'bold', textColor: [17, 24, 39] },
+                    4: { halign: 'center', fontStyle: 'bold' },
+                    5: { halign: 'center' },
+                    6: { halign: 'center', fontStyle: 'bold' }
+                },
+                didParseCell: function(data) {
+                    if (data.section === 'body') {
+                        // Colorize Ranks 1, 2, 3
+                        if (data.column.index === 0) {
+                            if (data.cell.raw === 1) data.cell.styles.textColor = [217, 119, 6]; // Gold
+                            else if (data.cell.raw === 2) data.cell.styles.textColor = [100, 116, 139]; // Silver
+                            else if (data.cell.raw === 3) data.cell.styles.textColor = [180, 83, 9]; // Bronze
+                        }
+                        // Status colors
+                        if (data.column.index === 6) {
+                            if (data.cell.raw === 'F') data.cell.styles.textColor = [220, 38, 38];
+                            else data.cell.styles.textColor = [22, 163, 74];
+                        }
+                    }
+                }
+            });
+            
+            doc.save("Combined_Rank_List_March2026.pdf");
+            showToast("Combined Rank List generated successfully!");
+        }
+
+        // --- NEW: Combined Subject Performance Analysis ---
+        function downloadSubjectAnalysis() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait' });
+            
+            // Combine all students
+            let allStudents = [];
+            for (const students of Object.values(classData)) {
+                allStudents.push(...students);
+            }
+            
+            const totalStudentsCount = allStudents.length;
+            if (totalStudentsCount === 0) {
+                showToast("No students found for analysis!", true);
+                return;
+            }
+            
+            // Define subjects and their passing thresholds
+            const subjectsInfo = [
+                { name: 'Arabic', max: 40, pass: 12 },
+                { name: 'MLM 2', max: 40, pass: 12 },
+                { name: 'English', max: 40, pass: 12 },
+                { name: 'Hindi', max: 40, pass: 12 },
+                { name: 'SS', max: 40, pass: 12 },
+                { name: 'Maths', max: 40, pass: 12 },
+                { name: 'Physics', max: 20, pass: 6 },
+                { name: 'Chemistry', max: 20, pass: 6 },
+                { name: 'Biology', max: 20, pass: 6 }
+            ];
+            
+            // Calculate statistics
+            let analysis = subjectsInfo.map(sub => {
+                let passedCount = 0;
+                let failedCount = 0;
+                
+                allStudents.forEach(s => {
+                    if (s.marks[sub.name] >= sub.pass) {
+                        passedCount++;
+                    } else {
+                        failedCount++;
+                    }
+                });
+                
+                const failPct = (failedCount / totalStudentsCount) * 100;
+                const passPct = (passedCount / totalStudentsCount) * 100;
+                
+                return {
+                    subject: sub.name,
+                    max: sub.max,
+                    total: totalStudentsCount,
+                    passed: passedCount,
+                    failed: failedCount,
+                    failPct: failPct,
+                    passPct: passPct
+                };
+            });
+            
+            // Sort by Fail Percentage (Descending - hardest subjects first)
+            analysis.sort((a, b) => b.failPct - a.failPct);
+            
+            const tableBody = analysis.map((a, index) => [
+                index + 1, // Order of difficulty (1 = hardest)
+                a.subject,
+                a.total,
+                a.passed,
+                a.failed,
+                a.passPct.toFixed(1) + '%',
+                a.failPct.toFixed(1) + '%'
+            ]);
+            
+            const pageWidth = doc.internal.pageSize.getWidth();
+            doc.setFontSize(15);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(6, 78, 59);
+            doc.text("Wafy Foundation School Annual Examination - March 2026", pageWidth / 2, 16, { align: "center" });
+            
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(50, 50, 50);
+            doc.text("Subject-Wise Performance Analysis (FDN-A & FDN-B Combined)", pageWidth / 2, 23, { align: "center" });
+            
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            doc.text("Sorted by Hardest Subject (Highest Failure Rate)", pageWidth / 2, 28, { align: "center" });
+
+            doc.autoTable({
+                startY: 33,
+                head: [['Diff. Rank', 'Subject', 'Total Students', 'Passed', 'Failed', 'Pass %', 'Fail %']],
+                body: tableBody,
+                theme: 'grid',
+                styles: { fontSize: 10, cellPadding: 3, textColor: [55, 65, 81], lineColor: [229, 231, 235], lineWidth: 0.1 },
+                headStyles: { fillColor: [15, 118, 110], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+                columnStyles: {
+                    0: { halign: 'center', fontStyle: 'bold', textColor: [156, 163, 175] },
+                    1: { halign: 'left', fontStyle: 'bold', textColor: [17, 24, 39] },
+                    2: { halign: 'center' },
+                    3: { halign: 'center', textColor: [22, 163, 74], fontStyle: 'bold' }, // Green
+                    4: { halign: 'center', textColor: [220, 38, 38], fontStyle: 'bold' }, // Red
+                    5: { halign: 'center', textColor: [22, 163, 74] }, // Green
+                    6: { halign: 'center', textColor: [220, 38, 38], fontStyle: 'bold' } // Red
+                }
+            });
+            
+            doc.save("Combined_Subject_Analysis_March2026.pdf");
+            showToast("Subject Analysis Report generated successfully!");
+        }
+
+        // --- Existing Individual Marksheet PDF Generation Logic ---
+        function buildStudentPDFContent(doc, student) {
+            const pageWidth = doc.internal.pageSize.getWidth();
+            let startY = 25;
+
+            // Add Header
+            doc.setFontSize(24);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(6, 78, 59); // Emerald 900
+            doc.text("Wafy Foundation School", pageWidth / 2, startY, { align: "center" });
+
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(50, 50, 50);
+            doc.text("Annual Examination - March 2026", pageWidth / 2, startY + 10, { align: "center" });
+            
+            doc.setFontSize(12);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Mark List (${currentClass}) PMSA Wafy College, Kattilangadi`, pageWidth / 2, startY + 18, { align: "center" });
+
+            // Horizontal Line
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.5);
+            doc.line(15, startY + 28, pageWidth - 15, startY + 28);
+
+            // Add Student Details Box
+            doc.setFontSize(13);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(0, 0, 0);
+            
+            doc.text(`Student Name : ${student.name}`, 15, startY + 40);
+            doc.text(`Register No : ${student.regNo}`, pageWidth - 15, startY + 40, { align: "right" });
+
+            // Format Table Data
+            const tableData = [
+                ["Arabic", "40", student.marks.Arabic],
+                ["MLM 2", "40", student.marks["MLM 2"]],
+                ["English", "40", student.marks.English],
+                ["Hindi", "40", student.marks.Hindi],
+                ["SS", "40", student.marks.SS],
+                ["Maths", "40", student.marks.Maths],
+                ["Physics", "20", student.marks.Physics],
+                ["Chemistry", "20", student.marks.Chemistry],
+                ["Biology", "20", student.marks.Biology],
+            ];
+
+            // Render Table
+            doc.autoTable({
+                startY: startY + 48,
+                margin: { left: 15, right: 15 },
+                head: [['Subject', 'Max Marks', 'Marks Obtained']],
+                body: tableData,
+                theme: 'grid',
+                styles: {
+                    fontSize: 11,
+                    cellPadding: 4 // Reduced padding to easily fit on one page
+                },
+                headStyles: { 
+                    fillColor: [15, 118, 110], // Teal 700 
+                    textColor: [255, 255, 255],
+                    fontSize: 12,
+                    fontStyle: 'bold',
+                    halign: 'center'
+                },
+                columnStyles: {
+                    0: { halign: 'left', fontStyle: 'bold' },
+                    1: { halign: 'center' },
+                    2: { halign: 'center', fontStyle: 'bold' }
+                },
+                alternateRowStyles: {
+                    fillColor: [249, 250, 251]
+                },
+                foot: [
+                    ['TOTAL', '300', student.total],
+                    ['PERCENTAGE', '', `${student.pct}%`],
+                    ['STATUS', '', student.status === 'P' ? 'PASS' : 'FAIL']
+                ],
+                footStyles: { 
+                    fillColor: [245, 245, 245], // Light Gray
+                    textColor: [0, 0, 0], 
+                    fontStyle: 'bold',
+                    halign: 'center',
+                    fontSize: 12
+                },
+                didParseCell: function(data) {
+                    // Color the Status Value cell
+                    if (data.section === 'foot' && data.row.index === 2 && data.column.index === 2) {
+                        if (student.status === 'P') {
+                            data.cell.styles.textColor = [22, 163, 74]; // Green text for Pass
+                        } else {
+                            data.cell.styles.textColor = [220, 38, 38]; // Red text for Fail
+                        }
+                    }
+                    
+                    // Color failed subject marks in the body
+                    if (data.section === 'body' && data.column.index === 2) {
+                        const maxMarks = parseInt(data.row.raw[1]);
+                        const marksObtained = parseInt(data.cell.raw);
+                        
+                        let isFailed = false;
+                        if (maxMarks === 40 && marksObtained < 12) isFailed = true;
+                        if (maxMarks === 20 && marksObtained < 6) isFailed = true;
+                        
+                        if (isFailed) {
+                            data.cell.styles.textColor = [220, 38, 38]; // Red text for failed subject
+                        }
+                    }
+                }
+            });
+        }
+
+        function downloadSinglePDF(regNo) {
+            const student = classData[currentClass].find(s => s.regNo === regNo);
+            if (!student) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            buildStudentPDFContent(doc, student);
+            
+            const safeName = student.name.replace(/[^a-z0-9]/gi, '_').toUpperCase();
+            doc.save(`${currentClass}_${safeName}_Marksheet_2026.pdf`);
+            showToast(`Marksheet for ${student.name} downloaded!`);
+        }
+
+        async function downloadAllPDF(filterStatus = 'ALL') {
+            const { jsPDF } = window.jspdf;
+            const zip = new JSZip();
+            
+            const btn = document.getElementById('mainZipBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="ph ph-spinner icon-spin" style="font-size: 1.125rem;"></i> <span class="btn-text-hidden">Zipping...</span>';
+            btn.classList.add('disabled');
+
+            // Hide the dropdown menu immediately on click
+            document.getElementById('zipDropdown').classList.add('hidden');
+
+            try {
+                let students = classData[currentClass];
+                let fileSuffix = "All_Students";
+
+                if (filterStatus === 'F') {
+                    students = students.filter(s => s.status === 'F');
+                    fileSuffix = "Failed_Students";
+                } else if (filterStatus === 'P') {
+                    students = students.filter(s => s.status === 'P');
+                    fileSuffix = "Passed_Students";
+                }
+
+                if (students.length === 0) {
+                    showToast(`No ${filterStatus === 'F' ? 'failed' : filterStatus === 'P' ? 'passed' : ''} students found to zip in this class!`, true);
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('disabled');
+                    return;
+                }
+
+                showToast(`Generating ZIP for ${students.length} students... Please wait.`);
+
+                students.forEach((student) => {
+                    const doc = new jsPDF();
+                    buildStudentPDFContent(doc, student);
+                    
+                    const safeName = student.name.replace(/[^a-z0-9]/gi, '_').toUpperCase();
+                    const fileName = `${currentClass}_${safeName}_Marksheet_2026.pdf`;
+                    
+                    const pdfArrayBuffer = doc.output('arraybuffer');
+                    zip.file(fileName, pdfArrayBuffer);
+                });
+
+                const zipBlob = await zip.generateAsync({ type: "blob" });
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(zipBlob);
+                link.download = `${fileSuffix}_MarkSheets_${currentClass}_March2026.zip`;
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+                
+                showToast("ZIP file successfully generated and downloaded!");
+                
+            } catch (error) {
+                console.error("Error generating ZIP:", error);
+                showToast("An error occurred while zipping files.", true);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.classList.remove('disabled');
+            }
+        }
+
+        // Initialize table on load
+        window.onload = renderTable;
+    </script>
+</body>
+</html>
